@@ -15,7 +15,7 @@ AIthlete brings you a suite of innovative tools that combine modern technology w
 
 ## Features to be added
 
-- **Calorie Tracker:** Keep an accurate log of your daily intake and stay on track.
+- **Calorie Tracker:** Keep an accurate log of your daily intake and stay on track. (🚧)
 - **Offline Data Store:** Enjoy rapid access to your data without the need for an internet connection.
 - **Pose Estimation:** Leverage advanced algorithms for real-time exercise corrections.
 - **Muscle Build Tracker:** Monitor your progress in building muscle and reaching new personal records.
