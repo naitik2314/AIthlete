@@ -11,7 +11,6 @@ BASE_URL = "https://api.nal.usda.gov/fdc/v1"
 query = "apple with skin raw"
 
 
-# Step 1: Search for Food to Get the FDC ID
 search_params = {
     "query": query,
     "api_key": API_KEY,
@@ -41,8 +40,17 @@ if search_response.status_code == 200:
                 1003: "Protein",
                 1004: "Fat",
                 1005: "Carbohydrates",
-                1008: "Calories"
+                1008: "Calories",  # Standard calories (may be missing)
+                1002: "Energy (kJ)",  # Convert if needed
+                2047: "Calories (Atwater General)",  # Preferred
+                2048: "Calories (Atwater Specific)"  # More precise
             }
+
+            # Default serving size (100g if not provided)
+            serving_size = detail_data.get("servingSize", 100)
+            serving_unit = detail_data.get("servingSizeUnit", "g")
+
+            print(f"Default Serving Size: {serving_size} {serving_unit}")
 
             # Ensure "foodNutrients" exists and is not empty
             if "foodNutrients" in detail_data and isinstance(detail_data["foodNutrients"], list):
@@ -53,9 +61,35 @@ if search_response.status_code == 200:
                     if "nutrient" in nutrient and "id" in nutrient["nutrient"]
                 }
 
-                # Print Nutrient Values
-                for nutrient_id, nutrient_name in macronutrient_ids.items():
-                    print(f"{nutrient_name}: {nutrients.get(nutrient_id, 'N/A')} G")
+                # Handle Calories properly
+                calories = nutrients.get(1008, None)  # Standard Calories (kcal)
+                atwater_general = nutrients.get(2047, None)  # Atwater General Factors
+                atwater_specific = nutrients.get(2048, None)  # Atwater Specific Factors
+                energy_kj = nutrients.get(1002, None)  # Energy in kJ
+
+                # Choose the best available calorie value
+                if calories is None or calories == 0:
+                    if atwater_general is not None and atwater_general > 0:
+                        calories = atwater_general
+                    elif atwater_specific is not None and atwater_specific > 0:
+                        calories = atwater_specific
+                    elif energy_kj is not None and energy_kj > 0:
+                        calories = round(energy_kj * 0.239, 2)  # Convert kJ to kcal
+                    else:
+                        calories = "Not Available"
+
+                # Scale Nutrients Based on Serving Size
+                scale_factor = serving_size / 100  # Convert to user-selected portion
+                scaled_nutrients = {
+                    nutrient_name: round(nutrients.get(nutrient_id, 0) * scale_factor, 2)
+                    for nutrient_id, nutrient_name in macronutrient_ids.items()
+                }
+
+                # Print Scaled Nutrient Values
+                for nutrient_name, value in scaled_nutrients.items():
+                    unit = "KCAL" if "Calories" in nutrient_name else "G"
+                    print(f"{nutrient_name}: {value} {unit}")
+
             else:
                 print("No nutrient data available for this food.")
         else:
